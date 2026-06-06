@@ -554,18 +554,21 @@ footer{background:var(--navy);color:rgba(255,255,255,.6);padding:50px 20px 30px}
     <div style="text-align:center;margin:16px 0">
       <span style="font-family:'Playfair Display',serif;font-size:2rem;color:var(--gold)" id="pay-amount">₹0</span>
     </div>
+    <p style="color:rgba(255,255,255,.5);text-align:center;font-size:.82rem;margin-bottom:12px">Choose payment method</p>
     <div class="pay-grid">
+      <div class="pay-option" onclick="selectPayment('cash')">
+        <div class="pay-icon">💵</div><div class="pay-label">Cash</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Pay to driver</div>
+      </div>
+      <div class="pay-option" onclick="selectPayment('upi')">
+        <div class="pay-icon">📱</div><div class="pay-label">UPI / QR</div>
+        <div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:4px">Pay online</div>
+      </div>
       <div class="pay-option" onclick="selectPayment('phonepe')">
         <div class="pay-icon">💜</div><div class="pay-label">PhonePe</div>
       </div>
       <div class="pay-option" onclick="selectPayment('gpay')">
         <div class="pay-icon">🎨</div><div class="pay-label">Google Pay</div>
-      </div>
-      <div class="pay-option" onclick="selectPayment('paytm')">
-        <div class="pay-icon">🔵</div><div class="pay-label">Paytm</div>
-      </div>
-      <div class="pay-option" onclick="selectPayment('cash')">
-        <div class="pay-icon">💵</div><div class="pay-label">Pay Cash</div>
       </div>
     </div>
     <div class="qr-container" id="qr-container" style="display:none">
@@ -586,7 +589,7 @@ footer{background:var(--navy);color:rgba(255,255,255,.6);padding:50px 20px 30px}
 const SUPABASE_URL = 'https://lhylfcxjwenvwfggptnh.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_hUoRIprUXQO_1sAvAse1NQ_ERj9sfUP';
 const GEOAPIFY_KEY = 'abf81e0fb280456a88ecbf1c26f546ff';
-const FONNTE_TOKEN = 'YOUR_FONNTE_TOKEN'; // ← Replace with your Fonnte API token
+// FONNTE_TOKEN is handled by /api/send-otp server function
 const TELEGRAM_BOT_TOKEN = '8892085445:AAHmolb4EbkpAay_rOuNCxgKK5QUKM4SmjA';
 const TELEGRAM_CHAT_ID = '8252090421';
 const UPI_PRIMARY = 'kaviapt02@okaxis';
@@ -623,25 +626,19 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ── SEND OTP VIA FONNTE ─────────────────────────────────────
-// OTP is always stored in-memory (state.currentOTP) as primary source.
-// WhatsApp delivery via Fonnte is attempted but never blocks login.
+// ── SEND OTP VIA SERVER API (/api/send-otp) ─────────────────
+// Token stays on server — not exposed in HTML
 async function sendOTP(phone, otp) {
-  const message = `🚗 *Sowmiya Travels*\n\nYour OTP: *${otp}*\n\nValid 10 minutes. Do not share.\n_Your Journey, Our Joy_ 🌟`;
-  const controller = new AbortController();
-  setTimeout(() => controller.abort(), 10000);
   try {
-    const res = await fetch('https://api.fonnte.com/send', {
+    const res = await fetch('/api/send-otp', {
       method: 'POST',
-      headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ target: phone, message, countryCode: '91' }),
-      signal: controller.signal
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, otp })
     });
     const data = await res.json();
-    console.log('Fonnte:', data);
-    return data.status === true;
+    return data.success === true;
   } catch (err) {
-    console.warn('Fonnte send failed (WhatsApp may still receive):', err.message);
+    console.warn('OTP API error:', err.message);
     return false;
   }
 }
@@ -696,15 +693,15 @@ async function sendWhatsAppConfirmation(booking) {
 📅 ${booking.pickup_date} at ${booking.pickup_time}
 📍 From: ${booking.pickup_location}
 📍 To: ${booking.drop_location || 'N/A'}
-💰 ₹${booking.total_amount || 'TBD'}
+💰 ₹${booking.total_amount ? Number(booking.total_amount).toLocaleString('en-IN') : 'TBD'}
 
 📞 Queries: 9786033425
 _Your Journey, Our Joy!_ 🌟`;
   try {
-    await fetch('https://api.fonnte.com/send', {
+    await fetch('/api/send-whatsapp', {
       method: 'POST',
-      headers: { 'Authorization': FONNTE_TOKEN, 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ target: booking.customer_phone, message: msg, countryCode: '91' })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: booking.customer_phone, message: msg })
     });
   } catch (err) { console.error('WhatsApp confirm error:', err); }
 }
@@ -839,16 +836,34 @@ function setupScrollAnimations() {
 
 // ── AUTH ───────────────────────────────────────────────
 async function checkAuthState() {
-  const sb = getSupabase();
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
-    if (profile) {
-      state.user = profile;
-      updateNavForUser(profile);
-      loadMyBookings();
+  // 1. Try localStorage first (works even without DB)
+  try {
+    const saved = localStorage.getItem('st_user');
+    if (saved) {
+      const user = JSON.parse(saved);
+      if (user && user.phone) {
+        state.user = user;
+        updateNavForUser(user);
+        loadMyBookings();
+        return; // done — user restored from localStorage
+      }
     }
-  }
+  } catch(e) { localStorage.removeItem('st_user'); }
+
+  // 2. Fallback: check Supabase session (for real auth users)
+  try {
+    const sb = getSupabase();
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) {
+      const { data: profile } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+      if (profile) {
+        state.user = profile;
+        localStorage.setItem('st_user', JSON.stringify(profile));
+        updateNavForUser(profile);
+        loadMyBookings();
+      }
+    }
+  } catch(e) { /* DB unavailable */ }
 }
 
 function updateNavForUser(profile) {
@@ -908,18 +923,14 @@ async function sendLoginOTP() {
   document.getElementById('auth-step-otp').style.display = 'block';
   startResendTimer();
 
-  // Try WhatsApp delivery in background (non-blocking)
+  // Send OTP via server API — WhatsApp only, never shown on screen
   sendOTP(cleaned, otp).then(sent => {
     if (sent) {
-      document.getElementById('otp-hint').textContent = `OTP sent to WhatsApp: +91 ${cleaned}`;
+      document.getElementById('otp-hint').textContent = `OTP sent to WhatsApp +91 ${cleaned}. Check your messages.`;
       showToast('OTP sent! Check WhatsApp', 'success');
     } else {
-      // WhatsApp failed — show OTP on screen so user can still login
-      document.getElementById('otp-hint').innerHTML =
-        `WhatsApp delivery failed.<br><strong style="font-size:1.3rem;letter-spacing:4px;color:#f5c842">${otp}</strong><br><small>Use this OTP to login</small>`;
-      const boxes = document.querySelectorAll('.otp-box');
-      otp.split('').forEach((d, i) => { if (boxes[i]) boxes[i].value = d; });
-      showToast('OTP shown on screen — WhatsApp unavailable', 'warning');
+      document.getElementById('otp-hint').textContent = `OTP sent to WhatsApp +91 ${cleaned}. If not received, tap Resend.`;
+      showToast('Check WhatsApp for OTP', 'info');
     }
   });
 
@@ -975,6 +986,9 @@ async function verifyLoginOTP() {
   document.getElementById('auth-step-otp').style.display = 'none';
   document.getElementById('auth-step-success').style.display = 'block';
   document.getElementById('success-msg').textContent = `Welcome, ${state.authName || 'Traveller'}! 🚗`;
+
+  // Persist login to survive page refresh
+  localStorage.setItem('st_user', JSON.stringify(state.user));
 
   updateNavForUser(state.user);
   loadMyBookings();
@@ -1035,12 +1049,10 @@ async function resendOTP() {
   const otp = generateOTP();
   state.currentOTP = otp;
   showToast('Resending OTP…', 'info');
-  sendOTP(state.authPhone, otp).then(() => {
-    showToast('OTP resent! Check WhatsApp', 'success');
-    console.log('Resent OTP (dev):', otp);
-  }).catch(err => {
-    showToast(err.message || 'Error resending OTP', 'error');
-    console.log('Resent OTP fallback (dev):', otp);
+  sendOTP(state.authPhone, otp).then(sent => {
+    showToast(sent ? 'OTP resent! Check WhatsApp' : 'Sending — check WhatsApp shortly', sent ? 'success' : 'info');
+  }).catch(() => {
+    showToast('Check WhatsApp for OTP', 'info');
   });
   startResendTimer();
 }
@@ -1261,12 +1273,51 @@ function updateFarePreview() {
     airport_pickup: 'Airport Pickup Fee', extra_km: 'Extra KM Rate'
   };
 
+  const isPerKm = rule.rule_type === 'per_km' || rule.rule_type === 'extra_km';
+  const isPerHour = rule.rule_type === 'per_hour';
+  const isPerDay = rule.rule_type === 'per_day';
+
+  // Get quantity input value
+  const qtyInput = document.getElementById('fare-qty-input');
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
+
+  let total = rule.amount;
+  if (isPerKm && qty > 0) total = rule.amount * qty;
+  else if (isPerHour && qty > 0) total = rule.amount * qty;
+  else if (isPerDay && qty > 0) total = rule.amount * qty;
+
+  // Round trip doubles the amount
+  if (state.tripType === 'round_trip' && qty > 0 && (isPerKm || isPerHour)) total *= 2;
+
+  // Update booking total for payment
+  if (state.pendingBooking) state.pendingBooking.total_amount = total;
+
+  let qtyLabel = isPerKm ? 'Enter Distance (KM)' : isPerHour ? 'Enter Hours' : isPerDay ? 'Enter Days' : null;
+
   rows.innerHTML = `
-    <div class="fare-row"><span>${ruleNames[rule.rule_type]}</span><span>₹${rule.amount}</span></div>
+    <div class="fare-row"><span>${ruleNames[rule.rule_type] || rule.rule_type}</span><span>₹${rule.amount}${isPerKm ? '/km' : isPerHour ? '/hr' : isPerDay ? '/day' : ''}</span></div>
     ${rule.description ? `<div class="fare-row"><span>Note</span><span>${rule.description}</span></div>` : ''}
-    <div class="fare-row total"><span>Base Amount</span><span>₹${rule.amount}</span></div>
+    ${qtyLabel ? `
+    <div class="fare-row" style="margin-top:8px">
+      <span>${qtyLabel}</span>
+      <input id="fare-qty-input" type="number" min="1" step="0.5"
+        value="${qty || ''}" placeholder="0"
+        style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.4);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;text-align:right"
+        oninput="updateFarePreview()">
+    </div>
+    ${state.tripType === 'round_trip' && qty > 0 && (isPerKm || isPerHour) ? '<div class="fare-row"><span>Round Trip (×2)</span><span>×2</span></div>' : ''}
+    ` : ''}
+    <div class="fare-row total"><span>💰 Total Amount</span><span style="font-size:1.15rem;color:var(--gold)">₹${total.toLocaleString('en-IN')}</span></div>
   `;
   preview.style.display = 'block';
+
+  // Re-attach event listener after innerHTML update (input gets recreated)
+  const newInput = document.getElementById('fare-qty-input');
+  if (newInput && !newInput._bound) {
+    newInput._bound = true;
+    newInput.addEventListener('input', updateFarePreview);
+    newInput.focus();
+  }
 }
 
 function scrollToBooking(vehicleId) {
@@ -1300,6 +1351,20 @@ async function confirmBooking() {
   const sb = getSupabase();
   const rule = state.selectedFareRule;
 
+  // Calculate total from fare preview qty input
+  const qtyInput = document.getElementById('fare-qty-input');
+  const qty = qtyInput ? parseFloat(qtyInput.value) || 0 : 0;
+  let totalAmount = rule?.amount || null;
+  if (rule && qty > 0) {
+    const isPerKm = rule.rule_type === 'per_km' || rule.rule_type === 'extra_km';
+    const isPerHour = rule.rule_type === 'per_hour';
+    const isPerDay = rule.rule_type === 'per_day';
+    if (isPerKm || isPerHour || isPerDay) {
+      totalAmount = rule.amount * qty;
+      if (state.tripType === 'round_trip' && (isPerKm || isPerHour)) totalAmount *= 2;
+    }
+  }
+
   const bookingData = {
     customer_id: state.user.id,
     customer_name: name,
@@ -1319,7 +1384,8 @@ async function confirmBooking() {
     fare_rule_id: rule?.id || null,
     fare_type: rule?.rule_type || null,
     base_amount: rule?.amount || null,
-    total_amount: rule?.amount || null,
+    total_amount: totalAmount,
+    estimated_km: (rule?.rule_type === 'per_km' || rule?.rule_type === 'extra_km') ? qty : null,
     special_requests: document.getElementById('special-requests').value.trim(),
     booking_status: 'pending',
     payment_status: 'pending'
@@ -1367,19 +1433,18 @@ function selectPayment(method) {
   state.paymentMethod = method;
 
   const qrContainer = document.getElementById('qr-container');
+  const amt = state.pendingBooking?.total_amount || 0;
   if (method === 'cash') {
     qrContainer.style.display = 'none';
+    document.getElementById('pay-confirm-btn').textContent = '✅ Book & Pay by Cash';
   } else {
-    const amt = state.pendingBooking?.total_amount || 0;
     document.getElementById('qr-img').src = generateQRUrl(amt);
     qrContainer.style.display = 'block';
-
+    document.getElementById('pay-confirm-btn').textContent = '✅ Confirm Payment & Book';
     if (method === 'phonepe') {
-      const link = generatePhonePeLink(amt);
-      setTimeout(() => { window.location.href = link; }, 500);
+      setTimeout(() => { window.location.href = generatePhonePeLink(amt); }, 600);
     } else if (method === 'gpay') {
-      const link = generateGPayLink(amt);
-      setTimeout(() => { window.location.href = link; }, 500);
+      setTimeout(() => { window.location.href = generateGPayLink(amt); }, 600);
     }
   }
 }
@@ -1441,12 +1506,13 @@ function toggleMenu() {
 }
 
 window.signOut = async () => {
-  const sb = getSupabase();
-  await sb.auth.signOut();
+  try { const sb = getSupabase(); await sb.auth.signOut(); } catch(e) {}
   state.user = null;
+  localStorage.removeItem('st_user');
   document.getElementById('btn-login-nav').style.display = 'block';
   document.getElementById('btn-logout-nav').style.display = 'none';
   document.getElementById('user-info').style.display = 'none';
+  document.getElementById('nav-mybookings').style.display = 'none';
   document.getElementById('my-bookings').style.display = 'none';
   showToast('Logged out successfully', 'info');
 };
