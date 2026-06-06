@@ -1318,18 +1318,28 @@ function updateFarePreview() {
   // Update booking total for payment
   if (state.pendingBooking) state.pendingBooking.total_amount = total;
 
-  let qtyLabel = isPerKm ? 'Enter Distance (KM)' : isPerHour ? 'Enter Hours' : isPerDay ? 'Enter Days' : null;
+  let qtyLabel = isPerKm ? 'Distance (KM)' : isPerHour ? 'Enter Hours' : isPerDay ? 'Enter Days' : null;
+
+  // Check if auto-distance is available (both coords set)
+  const hasCoords = state.pickupCoords && state.dropCoords;
 
   rows.innerHTML = `
     <div class="fare-row"><span>${ruleNames[rule.rule_type] || rule.rule_type}</span><span>₹${rule.amount}${isPerKm ? '/km' : isPerHour ? '/hr' : isPerDay ? '/day' : ''}</span></div>
     ${rule.description ? `<div class="fare-row"><span>Note</span><span>${rule.description}</span></div>` : ''}
     ${qtyLabel ? `
-    <div class="fare-row" style="margin-top:8px">
-      <span>${qtyLabel}</span>
-      <input id="fare-qty-input" type="number" min="1" step="0.5"
-        value="${qty || ''}" placeholder="0"
-        style="width:90px;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.4);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;text-align:right"
-        oninput="updateFarePreview()">
+    <div class="fare-row" style="margin-top:8px;flex-direction:column;gap:6px;align-items:stretch">
+      <span style="color:rgba(255,255,255,.7);font-size:.82rem">${qtyLabel}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="fare-qty-input" type="number" min="1" step="0.5"
+          value="${qty || ''}" placeholder="Enter manually"
+          style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.4);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;text-align:right"
+          oninput="updateFarePreview()">
+        ${isPerKm ? `<button onclick="autoDetectDistance()" title="Auto detect from pickup & drop"
+          style="padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.5);background:${hasCoords ? 'rgba(212,160,23,.2)' : 'rgba(255,255,255,.05)'};color:${hasCoords ? 'var(--gold)' : 'rgba(255,255,255,.3)'};font-size:.8rem;cursor:${hasCoords ? 'pointer' : 'not-allowed'};white-space:nowrap" ${hasCoords ? '' : 'disabled'}>
+          📍 Auto
+        </button>` : ''}
+      </div>
+      ${isPerKm && !hasCoords ? `<span style="color:rgba(255,165,0,.7);font-size:.75rem">⚠️ Enter pickup & drop locations above to use Auto detect</span>` : ''}
     </div>
     ${state.tripType === 'round_trip' && qty > 0 && (isPerKm || isPerHour) ? '<div class="fare-row"><span>Round Trip (×2)</span><span>×2</span></div>' : ''}
     ` : ''}
@@ -1342,8 +1352,41 @@ function updateFarePreview() {
   if (newInput && !newInput._bound) {
     newInput._bound = true;
     newInput.addEventListener('input', updateFarePreview);
-    newInput.focus();
   }
+}
+
+// ── AUTO DETECT DISTANCE via Geoapify Routing API ──────────
+async function autoDetectDistance() {
+  if (!state.pickupCoords || !state.dropCoords) {
+    showToast('Enter pickup and drop locations first', 'error'); return;
+  }
+  const btn = document.querySelector('button[onclick="autoDetectDistance()"]');
+  if (btn) { btn.textContent = '⏳…'; btn.disabled = true; }
+
+  try {
+    const { lat: lat1, lng: lng1 } = state.pickupCoords;
+    const { lat: lat2, lng: lng2 } = state.dropCoords;
+
+    const url = `https://api.geoapify.com/v1/routing?waypoints=${lat1},${lng1}|${lat2},${lng2}&mode=drive&apiKey=${GEOAPIFY_KEY}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    const distanceM = data?.features?.[0]?.properties?.distance;
+    if (!distanceM) throw new Error('No route found');
+
+    const distanceKm = Math.ceil(distanceM / 1000); // round up to nearest km
+    const input = document.getElementById('fare-qty-input');
+    if (input) {
+      input.value = distanceKm;
+      updateFarePreview();
+    }
+    showToast(`📍 Distance: ~${distanceKm} km (auto detected)`, 'success');
+  } catch(e) {
+    showToast('Could not auto-detect distance. Enter manually.', 'warning');
+    console.warn('Distance API error:', e.message);
+  }
+
+  if (btn) { btn.textContent = '📍 Auto'; btn.disabled = false; }
 }
 
 function scrollToBooking(vehicleId) {
