@@ -9,6 +9,7 @@
     { "src": "/api/send-whatsapp", "dest": "/api/send-whatsapp.js" },
     { "src": "/admin", "dest": "/admin/admin.html" },
     { "src": "/admin/", "dest": "/admin/admin.html" },
-    { "src": "/", "dest": "/index.html" }
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
