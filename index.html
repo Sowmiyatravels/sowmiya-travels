@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Median.co Native Bridge — required for UPI deep links in Android APK -->
+  <script src="https://cdn.median.co/median.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sowmiya Travels – Your Journey, Our Joy</title>
@@ -570,6 +572,12 @@ footer{background:var(--navy);color:rgba(255,255,255,.6);padding:50px 20px 30px}
       <div class="pay-option" onclick="selectPayment('gpay')">
         <div class="pay-icon">🎨</div><div class="pay-label">Google Pay</div>
       </div>
+      <div class="pay-option" onclick="selectPayment('paytm')">
+        <div class="pay-icon">🔵</div><div class="pay-label">Paytm</div>
+      </div>
+      <div class="pay-option" onclick="selectPayment('bhim')">
+        <div class="pay-icon">🇮🇳</div><div class="pay-label">BHIM UPI</div>
+      </div>
     </div>
     <div class="qr-container" id="qr-container" style="display:none">
       <img id="qr-img" src="" alt="QR Code" width="180">
@@ -772,6 +780,25 @@ function generateQRUrl(amount) {
 }
 function generatePhonePeLink(amount) { return `phonepe://pay?pa=${UPI_PRIMARY}&pn=Sowmiya+Travels&am=${amount}&cu=INR`; }
 function generateGPayLink(amount) { return `tez://upi/pay?pa=${UPI_PRIMARY}&pn=Sowmiya+Travels&am=${amount}&cu=INR`; }
+function generatePaytmLink(amount) { return `paytmmp://pay?pa=${UPI_PRIMARY}&pn=Sowmiya+Travels&am=${amount}&cu=INR`; }
+function generateBhimLink(amount) { return `upi://pay?pa=${UPI_PRIMARY}&pn=Sowmiya+Travels&am=${amount}&cu=INR&tn=SowmiyaTravels`; }
+
+// Median APK — open UPI deep link using nativebridge if available, else fallback to window.location
+function openPaymentApp(url) {
+  try {
+    if (window.median && median.nativebridge && median.nativebridge.customUrl) {
+      // Median native bridge — opens UPI apps directly on Android
+      median.nativebridge.customUrl({ url: url });
+    } else if (window.MedianBridge && MedianBridge.callNative) {
+      MedianBridge.callNative('openExternalUrl', JSON.stringify({ url: url }));
+    } else {
+      // Fallback for browser / PWA
+      window.location.href = url;
+    }
+  } catch(e) {
+    window.location.href = url;
+  }
+}
 
 // ── TOAST ───────────────────────────────────────────────────
 function showToast(msg, type = 'info') {
@@ -1593,17 +1620,26 @@ function selectPayment(method) {
 
   const qrContainer = document.getElementById('qr-container');
   const amt = state.pendingBooking?.total_amount || 0;
+
   if (method === 'cash') {
     qrContainer.style.display = 'none';
     document.getElementById('pay-confirm-btn').textContent = '✅ Book & Pay by Cash';
   } else {
+    // Show QR for all UPI methods
     document.getElementById('qr-img').src = generateQRUrl(amt);
     qrContainer.style.display = 'block';
     document.getElementById('pay-confirm-btn').textContent = '✅ Confirm Payment & Book';
-    if (method === 'phonepe') {
-      setTimeout(() => { window.location.href = generatePhonePeLink(amt); }, 600);
-    } else if (method === 'gpay') {
-      setTimeout(() => { window.location.href = generateGPayLink(amt); }, 600);
+
+    // Open respective UPI app via Median nativebridge
+    let deepLink = null;
+    if (method === 'phonepe')  deepLink = generatePhonePeLink(amt);
+    else if (method === 'gpay') deepLink = generateGPayLink(amt);
+    else if (method === 'paytm') deepLink = generatePaytmLink(amt);
+    else if (method === 'bhim')  deepLink = generateBhimLink(amt);
+    else if (method === 'upi')   deepLink = generateBhimLink(amt); // generic UPI
+
+    if (deepLink) {
+      setTimeout(() => { openPaymentApp(deepLink); }, 500);
     }
   }
 }
