@@ -501,9 +501,9 @@ footer{background:var(--navy);color:rgba(255,255,255,.6);padding:50px 20px 30px}
     </div>
     <div class="footer-col">
       <h4>Contact</h4>
-      <a href="tel:9786033425">📞 9786033425</a>
-      <a href="https://wa.me/919786033425">💬 WhatsApp</a>
-      <a href="#">📍 Vedaranyam, Nagapattinam</a>
+      <a href="tel:7094988181">📞 7094988181</a>
+      <a href="https://wa.me/917094988181">💬 WhatsApp</a>
+      <a href="#">📍 Annapettai, Vedaranyam, Nagapattinam</a>
       <a href="#">✉️ sowmiyatravels@gmail.com</a>
     </div>
   </div>
@@ -843,7 +843,7 @@ async function sendWhatsAppConfirmation(booking) {
   parts.push('💰 Total: ₹' + (booking.total_amount ? Number(booking.total_amount).toLocaleString('en-IN') : 'TBD'));
   if (booking.payment_method) parts.push('💳 Payment: ' + booking.payment_method.toUpperCase());
   parts.push('📊 Status: CONFIRMED');
-  parts.push('', '📞 For queries call: 9786033425', 'Thank you for choosing Sowmiya Travels! 🌟');
+  parts.push('', '📞 For queries call: 7094988181', 'Thank you for choosing Sowmiya Travels! 🌟');
   const msg = parts.join('\n');
   try {
     await fetch('/api/send-whatsapp', {
@@ -1292,7 +1292,7 @@ function renderVehiclesGrid() {
 function renderFleetSection() {
   const grid = document.getElementById('fleet-grid');
   if (!state.vehicles.length) {
-    grid.innerHTML = '<p style="color:var(--muted);text-align:center;grid-column:1/-1">Fleet details coming soon. Call us: 9786033425</p>';
+    grid.innerHTML = '<p style="color:var(--muted);text-align:center;grid-column:1/-1">Fleet details coming soon. Call us: 7094988181</p>';
     return;
   }
   grid.innerHTML = state.vehicles.map((v, i) => `
