@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel – Sowmiya Travels</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -161,51 +161,7 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
   table{min-width:600px}
   /* cards on mobile */
   .stat-card{padding:16px}
-  .page-content{padding:12px}
-
-  /* ── TABS: scroll horizontally on mobile ── */
-  .page-tabs{
-    display:flex;
-    gap:0;
-    overflow-x:auto;
-    -webkit-overflow-scrolling:touch;
-    scrollbar-width:none;
-    flex-wrap:nowrap;
-    border-bottom:2px solid #e8eaf0;
-    padding-bottom:0;
-    margin-bottom:16px;
-  }
-  .page-tabs::-webkit-scrollbar{display:none}
-  .page-tab{
-    flex-shrink:0;
-    padding:10px 14px;
-    font-size:.78rem;
-    white-space:nowrap;
-  }
-
-  /* ── PANEL HEADER: stack on mobile ── */
-  .panel-header{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
-    padding:14px 16px;
-  }
-  .panel-body{padding:12px 16px}
-
-  /* ── SEARCH BAR: full width on mobile ── */
-  .search-bar{flex-direction:column;gap:8px}
-  .search-input{min-width:unset;width:100%}
-  .filter-select{width:100%}
-
-  /* ── MODAL: full screen on mobile ── */
-  .modal-overlay{padding:0;align-items:flex-end}
-  .modal-box{border-radius:20px 20px 0 0;max-height:92vh;padding:20px 18px;max-width:100%}
-  .modal-footer{flex-direction:column-reverse}
-  .modal-footer .btn{width:100%;justify-content:center}
-
-  /* ── BUTTON groups in panel headers ── */
-  .panel-header .btn{width:100%;justify-content:center}
-  .panel-header > div{width:100%;display:flex;flex-wrap:wrap;gap:8px}
+  .page-content{padding:16px}
 }
 @media(min-width:769px){
   #sidebar-backdrop{display:none!important}
@@ -470,82 +426,7 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
           <button class="btn btn-gold" onclick="saveTerms()">💾 Save Terms</button>
         </div>
         <div class="panel-body">
-          <textarea id="terms-content" class="field-textarea" style="min-height:400px;font-size:.9rem;line-height:1.7" placeholder="Enter terms and conditions…">TERMS AND CONDITIONS
-Sowmiya Travels
-Annapettai, Vedaranyam, Nagapattinam, Tamil Nadu – 614 714
-Phone: 7094988181 | Email: sowmiyatravels@gmail.com
-Last Updated: June 2026
-
-1. ACCEPTANCE OF TERMS
-By making a booking with Sowmiya Travels, you agree to be bound by these Terms and Conditions. Please read them carefully before confirming your trip.
-
-2. BOOKING & CONFIRMATION
-2.1 A booking is considered confirmed only after you receive a booking confirmation number (e.g., ST20260607XXXX) via WhatsApp or from our office.
-2.2 Bookings must be made at least 2 hours before the scheduled pickup time.
-2.3 Sowmiya Travels reserves the right to decline any booking without stating a reason.
-2.4 The customer must provide accurate pickup location, drop location, date, and time. Any errors in details are the customer's responsibility.
-
-3. FARES & PAYMENT
-3.1 Fares are calculated based on vehicle type, trip type, and estimated distance (km).
-3.2 All fares shown are estimates. Final fare may vary based on actual kilometres travelled, waiting time, toll charges, and applicable surcharges.
-3.3 Night surcharge applies for trips between 10:00 PM and 6:00 AM.
-3.4 Toll, parking, and state permit charges are payable by the customer separately.
-3.5 Payment methods accepted: Cash, UPI (PhonePe / Google Pay). Payments must be settled in full at the end of the trip unless otherwise agreed in advance.
-3.6 For advance bookings, a partial advance payment may be required to hold the vehicle.
-
-4. CANCELLATION POLICY
-4.1 Cancellations must be communicated to Sowmiya Travels via phone or WhatsApp.
-4.2 Cancellation charges:
-    - Cancelled 24+ hours before pickup  : No charge
-    - Cancelled 6–24 hours before pickup : 25% of total fare
-    - Cancelled less than 6 hours        : 50% of total fare
-    - No-show (driver arrived, customer absent) : 100% of base fare
-4.3 If Sowmiya Travels cancels due to vehicle unavailability or unforeseen circumstances, a full refund of any advance paid will be issued within 3 working days.
-
-5. WAITING CHARGES
-5.1 A free waiting period of 15 minutes is allowed at the pickup point.
-5.2 Beyond 15 minutes, waiting charges of ₹100 per hour (pro-rated) will apply.
-5.3 At airports or railway stations, a free waiting period of 30 minutes is allowed after the scheduled arrival time.
-
-6. PASSENGER RESPONSIBILITIES
-6.1 Passengers must not carry illegal goods, prohibited substances, or items that violate Indian law.
-6.2 Smoking and consumption of alcohol inside the vehicle is strictly prohibited.
-6.3 Passengers are responsible for their personal belongings. Sowmiya Travels is not liable for any loss or damage to luggage or valuables.
-6.4 The number of passengers must not exceed the seating capacity of the vehicle.
-6.5 Passengers must follow driver instructions regarding road safety and vehicle rules.
-
-7. DRIVER & VEHICLE
-7.1 Sowmiya Travels will assign a suitable vehicle and driver based on availability.
-7.2 The company reserves the right to substitute a vehicle of equal or higher category without prior notice if the booked vehicle becomes unavailable.
-7.3 Drivers are instructed to follow all traffic rules and road safety laws.
-7.4 Customers must not request the driver to break traffic rules or drive rashly.
-
-8. ROUND TRIPS & RENTALS
-8.1 For round trips, the return journey must be completed within the agreed date/time.
-8.2 Any extension of rental hours or distance beyond the agreed limit will be charged at the standard hourly or per-km rate.
-8.3 For multi-day rentals, driver accommodation and meal allowance (₹300/day) is payable by the customer.
-
-9. LIMITATION OF LIABILITY
-9.1 Sowmiya Travels shall not be liable for delays caused by traffic, road conditions, weather, government orders, or acts of God.
-9.2 Our liability for any claim shall not exceed the total fare paid for that booking.
-9.3 We are not responsible for missed flights, trains, or appointments due to unforeseen delays.
-
-10. PRIVACY
-10.1 Customer phone numbers and trip details are collected solely for booking and communication purposes.
-10.2 We do not share your personal information with third parties except as required to complete your trip (e.g., driver contact details).
-10.3 OTP-based verification is used to protect your account.
-
-11. GOVERNING LAW
-These Terms and Conditions are governed by the laws of India. Any disputes shall be subject to the jurisdiction of courts in Nagapattinam, Tamil Nadu.
-
-12. CONTACT US
-For any queries, complaints, or feedback:
-  Sowmiya Travels
-  Annapettai, Vedaranyam, Nagapattinam District, Tamil Nadu – 614 714
-  Phone / WhatsApp: +91 70949 88181
-  Email: sowmiyatravels@gmail.com
-
-© 2026 Sowmiya Travels. All rights reserved.</textarea>
+          <textarea id="terms-content" class="field-textarea" style="min-height:400px;font-size:.9rem;line-height:1.7" placeholder="Enter terms and conditions…"></textarea>
         </div>
       </div>
     </div>
@@ -1969,14 +1850,6 @@ async function saveSettings() {
   showToast('Settings saved!', 'success');
 }
 
-async function loadTermsContent() {
-  const sb = await authSb();
-  const { data } = await sb.from('settings').select('value').eq('key', 'terms_content').single();
-  if (data && data.value) {
-    document.getElementById('terms-content').value = data.value;
-  }
-}
-
 async function saveTerms() {
   const sb = await authSb();
   const content = document.getElementById('terms-content').value;
@@ -2075,8 +1948,6 @@ function showPage(page, navEl) {
   };
   // Auto-load payment verifications when page opened
   if (page === 'payments') loadPaymentVerifications();
-  // Auto-load terms from settings when terms page is opened
-  if (page === 'terms') loadTermsContent();
   document.getElementById('page-title').textContent = titles[page] || page;
   A.currentPage = page;
 
