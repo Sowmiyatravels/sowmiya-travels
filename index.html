@@ -1269,6 +1269,7 @@ function setupAutocomplete(inputId, dropdownId, field) {
 }
 
 function pickLocation(inputId, dropdownId, field, lat, lng, name) {
+  state._distAutoFetched = false; // reset so distance re-fetches on next fare preview
   document.getElementById(inputId).value = name;
   document.getElementById(dropdownId).style.display = 'none';
   if (field === 'pickup') state.pickupCoords = { lat, lng };
@@ -1321,27 +1322,31 @@ function updateFarePreview() {
   if (state.pendingBooking) state.pendingBooking.total_amount = total;
 
   let qtyLabel = isPerKm ? 'Distance (KM)' : isPerHour ? 'Enter Hours' : isPerDay ? 'Enter Days' : null;
-
-  // Check if auto-distance is available (both coords set)
   const hasCoords = state.pickupCoords && state.dropCoords;
+
+  // Auto-detect distance when both coords available and it's per_km
+  if (isPerKm && hasCoords && !state._distAutoFetched) {
+    state._distAutoFetched = true;
+    setTimeout(() => autoDetectDistance(), 100);
+  }
 
   rows.innerHTML = `
     <div class="fare-row"><span>${ruleNames[rule.rule_type] || rule.rule_type}</span><span>₹${rule.amount}${isPerKm ? '/km' : isPerHour ? '/hr' : isPerDay ? '/day' : ''}</span></div>
     ${rule.description ? `<div class="fare-row"><span>Note</span><span>${rule.description}</span></div>` : ''}
     ${qtyLabel ? `
     <div class="fare-row" style="margin-top:8px;flex-direction:column;gap:6px;align-items:stretch">
-      <span style="color:rgba(255,255,255,.7);font-size:.82rem">${qtyLabel}</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <input id="fare-qty-input" type="number" min="1" step="0.5"
-          value="${qty || ''}" placeholder="Enter manually"
-          style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.4);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;text-align:right"
-          oninput="updateFarePreview()">
-        ${isPerKm ? `<button onclick="autoDetectDistance()" title="Auto detect from pickup & drop"
-          style="padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.5);background:${hasCoords ? 'rgba(212,160,23,.2)' : 'rgba(255,255,255,.05)'};color:${hasCoords ? 'var(--gold)' : 'rgba(255,255,255,.3)'};font-size:.8rem;cursor:${hasCoords ? 'pointer' : 'not-allowed'};white-space:nowrap" ${hasCoords ? '' : 'disabled'}>
-          📍 Auto
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="color:rgba(255,255,255,.7);font-size:.82rem">${qtyLabel}</span>
+        ${isPerKm ? `<button onclick="autoDetectDistance()" id="auto-dist-btn"
+          style="padding:4px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.5);background:rgba(212,160,23,.15);color:var(--gold);font-size:.78rem;cursor:pointer">
+          📍 Re-detect
         </button>` : ''}
       </div>
-      ${isPerKm && !hasCoords ? `<span style="color:rgba(255,165,0,.7);font-size:.75rem">⚠️ Enter pickup & drop locations above to use Auto detect</span>` : ''}
+      <input id="fare-qty-input" type="number" min="1" step="0.5"
+        value="${qty || ''}" placeholder="${isPerKm && !hasCoords ? '⚠️ Select locations above first' : '0'}"
+        style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid rgba(212,160,23,.4);background:rgba(255,255,255,.08);color:#fff;font-size:.95rem;text-align:right"
+        oninput="updateFarePreview()">
+      ${isPerKm && !hasCoords ? `<span style="color:rgba(255,165,0,.7);font-size:.75rem">⚠️ Select pickup & drop from suggestions to auto-detect distance</span>` : ''}
     </div>
     ${state.tripType === 'round_trip' && qty > 0 && (isPerKm || isPerHour) ? '<div class="fare-row"><span>Round Trip (×2)</span><span>×2</span></div>' : ''}
     ` : ''}
@@ -1349,7 +1354,6 @@ function updateFarePreview() {
   `;
   preview.style.display = 'block';
 
-  // Re-attach event listener after innerHTML update (input gets recreated)
   const newInput = document.getElementById('fare-qty-input');
   if (newInput && !newInput._bound) {
     newInput._bound = true;
@@ -1458,7 +1462,7 @@ async function confirmBooking() {
   }
 
   const bookingData = {
-    customer_id: state.user.id,
+    customer_id: null, // phone-based login has no UUID; customer identified by customer_phone
     customer_name: name,
     customer_phone: phone,
     vehicle_id: state.selectedVehicle?.id || null,
@@ -1566,7 +1570,7 @@ async function loadMyBookings() {
   if (!state.user) return;
   const sb = getSupabase();
   const { data } = await sb.from('bookings').select('*')
-    .eq('customer_id', state.user.id)
+    .eq('customer_phone', state.user.phone)
     .order('created_at', { ascending: false }).limit(20);
 
   document.getElementById('my-bookings').style.display = 'block';
