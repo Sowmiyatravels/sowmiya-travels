@@ -145,6 +145,16 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
 .bnav-item .bnav-icon{font-size:1.3rem;line-height:1}
 .bnav-badge{position:absolute;top:2px;right:6px;background:#ef4444;color:#fff;font-size:.55rem;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center}
 
+/* ── BOOKING CARDS (mobile) ──────────────────────────── */
+.booking-card{background:var(--white);border-radius:12px;padding:14px 16px;margin-bottom:10px;box-shadow:0 1px 6px rgba(13,27,62,.08);border-left:4px solid var(--gold)}
+.booking-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.booking-card-num{font-weight:700;color:var(--navy);font-size:.92rem}
+.booking-card-body{display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.8rem;color:var(--text)}
+.booking-card-body .label{color:var(--muted);font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+.booking-card-footer{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.booking-card-footer select{flex:1;min-width:120px;font-size:.75rem;padding:5px 8px;border:1.5px solid #e8eaf0;border-radius:8px;font-family:'DM Sans',sans-serif}
+.booking-card-footer .card-actions{display:flex;gap:6px}
+
 @media(max-width:768px){
   #menu-toggle{display:block}
   #sidebar{transform:translateX(-100%);z-index:100}
@@ -156,12 +166,21 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
   .top-bar{padding:0 16px;height:56px}
   .top-actions .btn{display:none}
   .top-actions #top-datetime{display:none}
-  /* make tables scroll horizontally on mobile */
+  /* bookings: use card layout, hide table */
+  #bookings-table{display:none}
+  #bookings-cards{display:block}
+  /* other tables scroll horizontally */
   .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:12px}
   table{min-width:600px}
-  /* cards on mobile */
   .stat-card{padding:16px}
   .page-content{padding:16px}
+  /* terms editor on mobile */
+  #terms-content{font-size:.8rem !important}
+  .page-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .page-tab{white-space:nowrap;font-size:.8rem;padding:10px 14px}
+}
+@media(min-width:769px){
+  #bookings-cards{display:none}
 }
 @media(min-width:769px){
   #sidebar-backdrop{display:none!important}
@@ -305,6 +324,8 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
             <tbody id="bookings-tbody"></tbody>
           </table>
         </div>
+        <!-- Mobile card view -->
+        <div id="bookings-cards" style="padding:12px"></div>
       </div>
     </div>
 
@@ -421,12 +442,50 @@ label.field-label{display:block;font-size:.78rem;font-weight:600;color:var(--mut
 
     <!-- TERMS PAGE -->
     <div id="page-terms" style="display:none">
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">📄 Terms & Conditions</span>
+      <div style="display:flex;gap:16px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <p style="color:var(--muted);font-size:.88rem;flex:1">Edit the Terms & Conditions shown to customers on the booking page.</p>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" onclick="toggleTermsPreview()">👁 Preview</button>
           <button class="btn btn-gold" onclick="saveTerms()">💾 Save Terms</button>
         </div>
-        <div class="panel-body">
-          <textarea id="terms-content" class="field-textarea" style="min-height:400px;font-size:.9rem;line-height:1.7" placeholder="Enter terms and conditions…"></textarea>
+      </div>
+
+      <!-- Tab toggle -->
+      <div class="page-tabs" style="margin-bottom:16px">
+        <button class="page-tab active" id="terms-tab-edit" onclick="switchTermsTab('edit')">✏️ Edit</button>
+        <button class="page-tab" id="terms-tab-preview" onclick="switchTermsTab('preview')">👁 Preview</button>
+      </div>
+
+      <!-- Editor -->
+      <div id="terms-editor-pane">
+        <div class="panel">
+          <div class="panel-header" style="background:#f8f9fc">
+            <span class="panel-title" style="font-size:.9rem;color:var(--muted)">📝 Plain text / Markdown editor</span>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm" style="background:#f0f2f8;color:var(--navy)" onclick="resetTermsToDefault()">↩ Reset to Default</button>
+            </div>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <textarea id="terms-content" class="field-textarea"
+              style="min-height:520px;font-size:.85rem;line-height:1.8;border:none;border-radius:0 0 var(--radius) var(--radius);resize:vertical;padding:20px;font-family:'Courier New',monospace;background:#fafbff"
+              placeholder="Enter terms and conditions…"
+              oninput="updateTermsCharCount()"></textarea>
+          </div>
+          <div style="padding:10px 20px;background:#f8f9fc;border-top:1px solid #eee;display:flex;justify-content:space-between;align-items:center;border-radius:0 0 var(--radius) var(--radius)">
+            <span id="terms-char-count" style="font-size:.78rem;color:var(--muted)">0 characters</span>
+            <span style="font-size:.78rem;color:var(--muted)">Last saved: <span id="terms-last-saved">—</span></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="terms-preview-pane" style="display:none">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">📄 Terms & Conditions — Customer View</span></div>
+          <div class="panel-body">
+            <div id="terms-preview-content"
+              style="font-size:.9rem;line-height:1.9;color:var(--text);white-space:pre-wrap;font-family:'DM Sans',sans-serif;max-height:560px;overflow-y:auto;padding:8px 0"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -1310,6 +1369,9 @@ function updateDashboard() {
 // ── RENDER TABLES ──────────────────────────────────────
 function renderBookings(list) {
   const rows = list || A.bookings;
+  const statuses = ['pending','confirmed','assigned','started','completed','cancelled'];
+
+  // Desktop table
   document.getElementById('bookings-tbody').innerHTML = rows.length
     ? rows.map(b => `
       <tr>
@@ -1324,9 +1386,7 @@ function renderBookings(list) {
         <td>${b.total_amount ? '₹'+Number(b.total_amount).toLocaleString('en-IN') : '—'}</td>
         <td>
           <select class="filter-select" style="font-size:.75rem;padding:4px 8px" onchange="quickUpdateBookingStatus('${b.id}',this.value)">
-            ${['pending','confirmed','assigned','started','completed','cancelled'].map(s =>
-              `<option value="${s}" ${b.booking_status===s?'selected':''}>${s}</option>`
-            ).join('')}
+            ${statuses.map(s => `<option value="${s}" ${b.booking_status===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </td>
         <td>
@@ -1337,6 +1397,52 @@ function renderBookings(list) {
         </td>
       </tr>`).join('')
     : '<tr><td colspan="11" class="empty-state">No bookings found</td></tr>';
+
+  // Mobile cards
+  const statusColors = {pending:'#f59e0b',confirmed:'#059669',assigned:'#2563eb',started:'#4f46e5',completed:'#16a34a',cancelled:'#dc2626'};
+  document.getElementById('bookings-cards').innerHTML = rows.length
+    ? rows.map(b => `
+      <div class="booking-card" style="border-left-color:${statusColors[b.booking_status]||'var(--gold)'}">
+        <div class="booking-card-header">
+          <span class="booking-card-num">📋 ${b.booking_number}</span>
+          <span class="status-pill pill-${b.booking_status}">${b.booking_status}</span>
+        </div>
+        <div class="booking-card-body">
+          <div>
+            <div class="label">Customer</div>
+            <div style="font-weight:600">${b.customer_name}</div>
+            <div style="color:var(--muted)">${b.customer_phone}</div>
+          </div>
+          <div>
+            <div class="label">Date & Time</div>
+            <div style="font-weight:600">${b.pickup_date}</div>
+            <div style="color:var(--muted)">${b.pickup_time || '—'}</div>
+          </div>
+          <div style="grid-column:1/-1">
+            <div class="label">Pickup</div>
+            <div>${b.pickup_location?.substring(0,60) || '—'}</div>
+          </div>
+          ${b.drop_location ? `<div style="grid-column:1/-1"><div class="label">Drop</div><div>${b.drop_location.substring(0,60)}</div></div>` : ''}
+          <div>
+            <div class="label">Vehicle</div>
+            <div>${b.vehicles ? b.vehicles.brand+' '+b.vehicles.model : '—'}</div>
+          </div>
+          <div>
+            <div class="label">Amount</div>
+            <div style="font-weight:700;color:#059669">${b.total_amount ? '₹'+Number(b.total_amount).toLocaleString('en-IN') : '—'}</div>
+          </div>
+        </div>
+        <div class="booking-card-footer">
+          <select onchange="quickUpdateBookingStatus('${b.id}',this.value)">
+            ${statuses.map(s => `<option value="${s}" ${b.booking_status===s?'selected':''}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`).join('')}
+          </select>
+          <div class="card-actions">
+            <button class="btn btn-sm btn-primary" onclick="editBooking('${b.id}')">✏️ Edit</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteBooking('${b.id}')">🗑</button>
+          </div>
+        </div>
+      </div>`).join('')
+    : '<div class="empty-state"><div class="icon">📋</div><p>No bookings found</p></div>';
 }
 
 function filterBookings() {
@@ -1850,11 +1956,176 @@ async function saveSettings() {
   showToast('Settings saved!', 'success');
 }
 
+// ── DEFAULT T&C CONTENT ────────────────────────────────
+const DEFAULT_TERMS = `TERMS AND CONDITIONS
+Sowmiya Travels
+Vedaranyam, Nagapattinam, Tamil Nadu
+Phone: 9786033425 | Email: sowmiyatravels@gmail.com
+Last Updated: June 2026
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. ACCEPTANCE OF TERMS
+By making a booking with Sowmiya Travels, you agree to be bound by these Terms and
+Conditions. Please read them carefully before confirming your trip.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+2. BOOKING & CONFIRMATION
+2.1 A booking is considered confirmed only after you receive a booking confirmation
+    number (e.g., ST20260607XXXX) via WhatsApp or from our office.
+2.2 Bookings must be made at least 2 hours before the scheduled pickup time.
+2.3 Sowmiya Travels reserves the right to decline any booking without stating a reason.
+2.4 The customer must provide accurate pickup location, drop location, date, and time.
+    Any errors in details are the customer's responsibility.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3. FARES & PAYMENT
+3.1 Fares are calculated based on vehicle type, trip type, and estimated distance (km).
+3.2 All fares shown are estimates. Final fare may vary based on actual kilometres
+    travelled, waiting time, toll charges, and applicable surcharges.
+3.3 Night surcharge applies for trips between 10:00 PM and 6:00 AM.
+3.4 Toll, parking, and state permit charges are payable by the customer separately.
+3.5 Payment methods accepted: Cash, UPI (PhonePe / Google Pay). Payments must be
+    settled in full at the end of the trip unless otherwise agreed in advance.
+3.6 For advance bookings, a partial advance payment may be required to hold the vehicle.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4. CANCELLATION POLICY
+4.1 Cancellations must be communicated to Sowmiya Travels via phone or WhatsApp.
+4.2 Cancellation charges:
+    - Cancelled 24+ hours before pickup  : No charge
+    - Cancelled 6–24 hours before pickup : 25% of total fare
+    - Cancelled less than 6 hours        : 50% of total fare
+    - No-show (driver arrived, customer absent) : 100% of base fare
+4.3 If Sowmiya Travels cancels due to vehicle unavailability or unforeseen
+    circumstances, a full refund of any advance paid will be issued within 3 working days.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5. WAITING CHARGES
+5.1 A free waiting period of 15 minutes is allowed at the pickup point.
+5.2 Beyond 15 minutes, waiting charges of ₹100 per hour (pro-rated) will apply.
+5.3 At airports or railway stations, a free waiting period of 30 minutes is allowed
+    after the scheduled arrival time.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+6. PASSENGER RESPONSIBILITIES
+6.1 Passengers must not carry illegal goods, prohibited substances, or items that
+    violate Indian law.
+6.2 Smoking and consumption of alcohol inside the vehicle is strictly prohibited.
+6.3 Passengers are responsible for their personal belongings. Sowmiya Travels is not
+    liable for any loss or damage to luggage or valuables.
+6.4 The number of passengers must not exceed the seating capacity of the vehicle.
+6.5 Passengers must follow driver instructions regarding road safety and vehicle rules.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+7. DRIVER & VEHICLE
+7.1 Sowmiya Travels will assign a suitable vehicle and driver based on availability.
+7.2 The company reserves the right to substitute a vehicle of equal or higher category
+    without prior notice if the booked vehicle becomes unavailable.
+7.3 Drivers are instructed to follow all traffic rules and road safety laws.
+7.4 Customers must not request the driver to break traffic rules or drive rashly.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+8. ROUND TRIPS & RENTALS
+8.1 For round trips, the return journey must be completed within the agreed date/time.
+8.2 Any extension of rental hours or distance beyond the agreed limit will be charged
+    at the standard hourly or per-km rate.
+8.3 For multi-day rentals, driver accommodation and meal allowance (₹300/day) is
+    payable by the customer.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+9. LIMITATION OF LIABILITY
+9.1 Sowmiya Travels shall not be liable for delays caused by traffic, road conditions,
+    weather, government orders, or acts of God.
+9.2 Our liability for any claim shall not exceed the total fare paid for that booking.
+9.3 We are not responsible for missed flights, trains, or appointments due to
+    unforeseen delays.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+10. PRIVACY
+10.1 Customer phone numbers and trip details are collected solely for booking and
+     communication purposes.
+10.2 We do not share your personal information with third parties except as required
+     to complete your trip (e.g., driver contact details).
+10.3 OTP-based verification is used to protect your account.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+11. GOVERNING LAW
+These Terms and Conditions are governed by the laws of India. Any disputes shall be
+subject to the jurisdiction of courts in Nagapattinam, Tamil Nadu.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+12. CONTACT US
+For any queries, complaints, or feedback:
+  Sowmiya Travels
+  Vedaranyam, Nagapattinam District, Tamil Nadu – 614 809
+  Phone / WhatsApp: +91 97860 33425
+  Email: sowmiyatravels@gmail.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+© 2026 Sowmiya Travels. All rights reserved.`;
+
 async function saveTerms() {
   const sb = await authSb();
   const content = document.getElementById('terms-content').value;
   await sb.from('settings').upsert({ key: 'terms_content', value: content });
   showToast('Terms saved!', 'success');
+  document.getElementById('terms-last-saved').textContent = new Date().toLocaleString('en-IN', { timeStyle:'short', dateStyle:'short' });
+}
+
+function updateTermsCharCount() {
+  const len = (document.getElementById('terms-content').value || '').length;
+  document.getElementById('terms-char-count').textContent = len.toLocaleString('en-IN') + ' characters';
+}
+
+function resetTermsToDefault() {
+  if (!confirm('Reset to default T&C? This will overwrite your current content.')) return;
+  document.getElementById('terms-content').value = DEFAULT_TERMS;
+  updateTermsCharCount();
+  showToast('Reset to default terms', 'info');
+}
+
+function switchTermsTab(tab) {
+  document.getElementById('terms-tab-edit').classList.toggle('active', tab === 'edit');
+  document.getElementById('terms-tab-preview').classList.toggle('active', tab === 'preview');
+  document.getElementById('terms-editor-pane').style.display = tab === 'edit' ? 'block' : 'none';
+  document.getElementById('terms-preview-pane').style.display = tab === 'preview' ? 'block' : 'none';
+  if (tab === 'preview') {
+    document.getElementById('terms-preview-content').textContent = document.getElementById('terms-content').value;
+  }
+}
+
+function toggleTermsPreview() { switchTermsTab('preview'); }
+
+// Initialize terms textarea with default content when page first loads
+function initTermsContent() {
+  const el = document.getElementById('terms-content');
+  if (el && !el.value.trim()) {
+    el.value = DEFAULT_TERMS;
+    updateTermsCharCount();
+  }
+}
+
+// Override loadSettings to also set terms content
+const _origLoadSettings = loadSettings;
+async function loadSettings() {
+  await _origLoadSettings();
+  // After settings load, check if terms was set; if not, use default
+  const el = document.getElementById('terms-content');
+  if (el && !el.value.trim()) {
+    el.value = DEFAULT_TERMS;
+    updateTermsCharCount();
+  }
 }
 
 // ── MODAL HELPERS ──────────────────────────────────────
