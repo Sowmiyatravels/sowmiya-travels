@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin Panel – Sowmiya Travels</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.107.0/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1451,8 +1451,8 @@ function renderFareRules() {
       ${A.fareRules.map(r => `
         <div style="display:grid;grid-template-columns:180px 1fr 100px 1fr 80px;gap:12px;align-items:center;padding:14px 16px;border:1.5px solid #e8eaf0;border-radius:10px">
           <select class="field-select" style="font-size:.85rem" onchange="updateFareLocal('${r.id}','vehicle_type',this.value)">
-            ${['All','Sedan','SUV','Hatchback','Innova','Innova Crysta','Tempo Traveller','Mini Bus'].map(t =>
-              `<option ${r.vehicle_type===t?'selected':''}>${t}</option>`
+            ${['All', ...new Set(A.vehicles.map(v => v.vehicle_type).filter(Boolean))].map(t =>
+              `<option value="${t}" ${r.vehicle_type===t?'selected':''}>${t === 'All' ? 'All Vehicles' : t}</option>`
             ).join('')}
           </select>
           <select class="field-select" style="font-size:.85rem" onchange="updateFareLocal('${r.id}','rule_type',this.value)">
@@ -1874,6 +1874,13 @@ function openFareModal() {
   const fmR = document.getElementById('fm-rule-type-manual');
   if (fmV) { fmV.style.display = 'none'; fmV.value = ''; }
   if (fmR) { fmR.style.display = 'none'; fmR.value = ''; }
+  // Populate from actual vehicles in database
+  const sel = document.getElementById('fm-vehicle-type');
+  if (sel) {
+    const types = ['All', ...new Set(A.vehicles.map(v => v.vehicle_type).filter(Boolean))];
+    sel.innerHTML = types.map(t => `<option value="${t}">${t === 'All' ? 'All Vehicles' : t}</option>`).join('')
+      + `<option value="__manual__">&#x2795; Add Custom Type\u2026</option>`;
+  }
   openModal('fare-modal');
 }
 
